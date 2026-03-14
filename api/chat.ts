@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 
 export default async function handler(req: Request, res: Response) {
-  console.log(`Proxying chat request: ${JSON.stringify(req.body).substring(0, 100)}...`);
   try {
+    const bodyStr = req.body ? JSON.stringify(req.body) : "";
+    console.log(`Proxying chat request: ${bodyStr.substring(0, 100)}...`);
     // JEITO CORRETO na pasta /api
     const apiKey = process.env.APIFREELLM_API_KEY;
     
