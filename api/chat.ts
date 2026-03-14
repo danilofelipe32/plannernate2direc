@@ -21,7 +21,16 @@ export default async function handler(req: Request, res: Response) {
     });
 
     console.log(`API response status: ${response.status}`);
-    const data = await response.json();
+    const textData = await response.text();
+    
+    let data;
+    try {
+      data = JSON.parse(textData);
+    } catch (e) {
+      console.error("Failed to parse API response as JSON. Raw response:", textData.substring(0, 500));
+      return res.status(response.status).json({ success: false, error: "Invalid JSON from upstream API", raw: textData.substring(0, 200) });
+    }
+
     res.status(response.status).json(data);
   } catch (error) {
     console.error("Error proxying to APIFreeLLM:", error);
