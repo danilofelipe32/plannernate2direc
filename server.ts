@@ -3,7 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import chatHandler from "./api/chat.js";
+import chatHandler from "./api/v1/chat.js";
 
 dotenv.config();
 

@@ -6,11 +6,17 @@ export default async function handler(req: Request, res: Response) {
     console.log(`Proxying chat request: ${bodyStr.substring(0, 100)}...`);
     // JEITO CORRETO na pasta /api
     const apiKey = process.env.APIFREELLM_API_KEY;
+    console.log(`API Key present: ${!!apiKey}`);
+    if (apiKey) {
+      console.log(`API Key starts with: ${apiKey.substring(0, 10)}...`);
+    }
     
     if (!apiKey) {
       console.error("APIFREELLM_API_KEY is not defined in environment variables!");
       return res.status(500).json({ success: false, error: "API Key not configured" });
     }
+
+    const payload = req.body && Object.keys(req.body).length > 0 ? req.body : { message: "Ping", model: "apifreellm" };
 
     const response = await fetch("https://apifreellm.com/api/v1/chat", {
       method: "POST",
@@ -18,7 +24,7 @@ export default async function handler(req: Request, res: Response) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(payload)
     });
 
     console.log(`API response status: ${response.status}`);
