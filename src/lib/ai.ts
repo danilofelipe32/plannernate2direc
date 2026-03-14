@@ -46,6 +46,16 @@ export async function generateAIContent(prompt: string, systemInstruction?: stri
         });
 
         if (!response.ok) {
+          let backendError = response.statusText;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) {
+              backendError = typeof errData.error === 'string' ? errData.error : JSON.stringify(errData.error);
+            }
+          } catch (e) {
+            // failed to parse json
+          }
+          
           if (response.status === 429) {
             if (retryCount < 2) {
               console.warn(`Rate limit hit (attempt ${retryCount + 1}), retrying in 26 seconds...`);
@@ -54,11 +64,13 @@ export async function generateAIContent(prompt: string, systemInstruction?: stri
             }
             throw new Error("Rate limit excedido. Aguarde 25 segundos e tente novamente.");
           } else if (response.status === 401) {
-            throw new Error("Chave de API inválida.");
+            throw new Error(`Chave de API inválida. Detalhe: ${backendError}`);
           } else if (response.status === 400) {
-            throw new Error("Requisição inválida (parâmetros ausentes).");
+            throw new Error(`Requisição inválida (parâmetros ausentes). Detalhe: ${backendError}`);
+          } else if (response.status === 500 && backendError.includes("API Key not configured")) {
+            throw new Error("A chave da IA não foi configurada no Vercel. Adicione a variável APIFREELLM_API_KEY no painel.");
           }
-          throw new Error(`Erro na API: ${response.statusText}`);
+          throw new Error(`Erro na API (${response.status}): ${backendError}`);
         }
 
         const data = await response.json();
