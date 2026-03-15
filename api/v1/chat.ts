@@ -16,20 +16,25 @@ export default async function handler(req: Request, res: Response) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey.trim()}`
+        "Authorization": `Bearer ${apiKey.trim()}`,
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
       },
       body: JSON.stringify(payload)
     });
 
     const textData = await response.text();
-    console.log(`[Proxy] Status: ${response.status} | Bytes: ${textData.length}`);
     
+    // Se não for sucesso, vamos retornar o erro detalhado para depuração
     if (!response.ok) {
-      console.error(`[Proxy Error] Status ${response.status}: ${textData.substring(0, 200)}`);
+      console.error(`[Proxy Error] Status: ${response.status}`, textData.substring(0, 200));
       return res.status(response.status).json({ 
         success: false, 
-        error: `Erro no servidor de IA (Status ${response.status})`,
-        details: textData.includes("cloudflare") || textData.includes("Forbidden") ? "Acesso bloqueado pelo firewall da API. Tente novamente em instantes." : textData.substring(0, 100)
+        error: `A API retornou erro ${response.status}. Verifique sua chave ou tente novamente.`,
+        details: textData.substring(0, 100)
       });
     }
 
@@ -37,7 +42,7 @@ export default async function handler(req: Request, res: Response) {
     try {
       data = JSON.parse(textData);
     } catch (e) {
-      return res.status(500).json({ success: false, error: "Resposta da IA não é um JSON válido", raw: textData.substring(0, 100) });
+      return res.status(500).json({ success: false, error: "Resposta da IA inválida (Não é JSON)", raw: textData.substring(0, 100) });
     }
 
     res.status(200).json(data);
