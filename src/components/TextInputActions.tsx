@@ -7,35 +7,16 @@ interface TextInputActionsProps {
   isTextArea?: boolean;
   onGenerate?: (text: string) => void;
   prompt?: string;
-  context?: string;
-  currentValue?: string;
 }
 
-export const TextInputActions: React.FC<TextInputActionsProps> = ({ onEdit, isTextArea, onGenerate, prompt, context, currentValue }) => {
+export const TextInputActions: React.FC<TextInputActionsProps> = ({ onEdit, isTextArea, onGenerate, prompt }) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const stripHtml = (html: string) => {
-    if (!html) return '';
-    // A simple regex to strip basic html tags
-    let text = html.replace(/<[^>]*>?/gm, '');
-    // replace non-breaking spaces
-    text = text.replace(/&nbsp;/ig, ' ');
-    return text;
-  };
-
-  const getCleanValue = (val: any) => {
-    if (val === undefined || val === null) return '';
-    return stripHtml(val.toString()).trim();
-  };
-
-  const isValueEmpty = getCleanValue(currentValue) === '';
-  const hasContext = (prompt && prompt.length > 0) || (context && context.length > 0);
-  
   const handleGenerate = async () => {
-    if (!onGenerate || !prompt || (!hasContext && isValueEmpty)) return;
+    if (!onGenerate || !prompt) return;
     setIsLoading(true);
     try {
-      const systemInstruction = `Você é um especialista sênior em gestão educacional e inovação pedagógica. Sua linguagem é clara, objetiva, técnica e profissional. Você deve fornecer respostas diretas, sem introduções ou conclusões desnecessárias, focando puramente no conteúdo solicitado.${context ? `\n\nContexto adicional do formulário relacionado a esta requisição:\n${context}` : ''}`;
+      const systemInstruction = "Você é um especialista sênior em gestão educacional e inovação pedagógica. Sua linguagem é clara, objetiva, técnica e profissional. Você deve fornecer respostas diretas, sem introduções ou conclusões desnecessárias, focando puramente no conteúdo solicitado.";
       const text = await generateAIContent(prompt, systemInstruction);
       
       if (text) {
@@ -66,14 +47,10 @@ export const TextInputActions: React.FC<TextInputActionsProps> = ({ onEdit, isTe
             type="button"
             onClick={handleGenerate}
             disabled={isLoading}
-            className={`p-1.5 rounded-md transition-all duration-200 ${
-              isLoading 
-                ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' 
-                : 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-            }`}
+            className="p-1.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-all duration-200"
             title="Gerar com IA"
           >
-           {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
           </button>
         </>
       )}

@@ -3,7 +3,6 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import chatHandler from "./api/v1/chat.js";
 
 dotenv.config();
 
@@ -27,8 +26,6 @@ async function startServer() {
     console.log("Health check requested");
     res.json({ status: "ok", timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
   });
-
-  app.post("/api/v1/chat", chatHandler);
 
   // Catch-all for undefined API routes
   app.all("/api/*", (req, res) => {
