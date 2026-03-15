@@ -50,7 +50,7 @@ export async function generateAIContent(prompt: string, systemInstruction?: stri
           },
           body: JSON.stringify({
             message: fullMessage,
-            model: "apifreellm"
+            model: "gpt-3.5-turbo"
           })
         });
 

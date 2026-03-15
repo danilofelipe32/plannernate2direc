@@ -17,12 +17,15 @@ export default async function handler(req: Request, res: Response) {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": "https://apifreellm.com",
+        "Referer": "https://apifreellm.com/"
       },
       body: JSON.stringify(payload)
     });
 
-    console.log(`[API Proxy] Status: ${response.status} para o modelo: ${payload.model || 'default'}`);
+    console.log(`[API Proxy] Status: ${response.status} | Modelo: ${payload.model || 'default'}`);
     const textData = await response.text();
     
     let data;
