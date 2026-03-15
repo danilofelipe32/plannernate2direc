@@ -27,6 +27,46 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
   });
 
+  app.post("/api/v1/chat", async (req, res) => {
+    try {
+      const { prompt, systemInstruction } = req.body;
+      const apiKey = process.env.APIFREELLM_API_KEY;
+
+      if (!apiKey) {
+        return res.status(500).json({ success: false, error: "APIFREELLM_API_KEY is not configured" });
+      }
+
+      const messages = [];
+      if (systemInstruction) {
+        messages.push({ role: "system", content: systemInstruction });
+      }
+      messages.push({ role: "user", content: prompt });
+
+      const response = await fetch("https://apifreellm.com/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini", // Or whatever model APIFreeLLM uses
+          messages: messages
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`APIFreeLLM API error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      res.json({ success: true, text: data.choices[0].message.content });
+    } catch (error) {
+      console.error("Error in /api/v1/chat:", error);
+      res.status(500).json({ success: false, error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Catch-all for undefined API routes
   app.all("/api/*", (req, res) => {
     console.log(`404 on API route: ${req.method} ${req.url}`);

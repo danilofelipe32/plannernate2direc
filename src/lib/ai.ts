@@ -1,7 +1,5 @@
 /// <reference types="vite/client" />
 
-import { GoogleGenAI } from "@google/genai";
-
 // Simple cache to avoid redundant requests
 const cache = new Map<string, { response: string, timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -17,25 +15,32 @@ export async function generateAIContent(prompt: string, systemInstruction?: stri
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-        tools: [{ googleSearch: {} }],
+    const response = await fetch('/api/v1/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        prompt,
+        systemInstruction,
+      }),
     });
 
-    if (response.text) {
-      cache.set(cacheKey, { response: response.text, timestamp: Date.now() });
-      return response.text;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success && data.text) {
+      cache.set(cacheKey, { response: data.text, timestamp: Date.now() });
+      return data.text;
     } else {
-      throw new Error("A IA não retornou nenhum conteúdo válido.");
+      throw new Error(data.error || "A IA não retornou nenhum conteúdo válido.");
     }
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
+    console.error('Error calling AI API:', error);
     throw new Error(`Erro na resposta da IA: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
   }
 }
