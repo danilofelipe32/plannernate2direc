@@ -33,8 +33,11 @@ async function startServer() {
       const apiKey = process.env.APIFREELLM_API_KEY;
 
       if (!apiKey) {
+        console.error("APIFREELLM_API_KEY is missing in process.env");
         return res.status(500).json({ success: false, error: "APIFREELLM_API_KEY is not configured" });
       }
+
+      console.log(`Sending request to APIFreeLLM... Model: gpt-4o-mini`);
 
       const messages = [];
       if (systemInstruction) {
@@ -56,10 +59,17 @@ async function startServer() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`APIFreeLLM API error: ${response.status} ${errorText}`);
+        console.error(`APIFreeLLM API error: ${response.status} ${errorText}`);
+        return res.status(response.status).json({ success: false, error: `APIFreeLLM API error: ${response.status} ${errorText}` });
       }
 
       const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error("Unexpected API response format:", JSON.stringify(data));
+        throw new Error("Unexpected API response format");
+      }
+
       res.json({ success: true, text: data.choices[0].message.content });
     } catch (error) {
       console.error("Error in /api/v1/chat:", error);
