@@ -8,7 +8,6 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [react(), tailwindcss()],
     define: {
-      'process.env.APIFREELLM_API_KEY': JSON.stringify(env.APIFREELLM_API_KEY),
     },
     resolve: {
       alias: {

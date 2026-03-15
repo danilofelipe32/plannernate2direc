@@ -5,23 +5,32 @@ const cache = new Map<string, { response: string, timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Queue for handling rate limits
-let isProcessing = false;
-const queue: (() => Promise<void>)[] = [];
+let activeRequests = 0;
+const MAX_CONCURRENT = 1;
+const queue: { execute: () => Promise<void>, priority: number }[] = [];
 
 async function processQueue() {
-  if (isProcessing || queue.length === 0) return;
-  isProcessing = true;
+  if (activeRequests >= MAX_CONCURRENT || queue.length === 0) return;
+  
+  // Sort by priority (higher first)
+  queue.sort((a, b) => b.priority - a.priority);
+  
   const next = queue.shift();
   if (next) {
-    await next();
-    // Add a small delay between successful requests to be safe
-    await new Promise(r => setTimeout(r, 1000));
+    activeRequests++;
+    try {
+      await next.execute();
+    } catch (e) {
+      console.error("Queue execution error:", e);
+    } finally {
+      activeRequests--;
+      // Small delay between requests to be safe
+      setTimeout(processQueue, 500);
+    }
   }
-  isProcessing = false;
-  if (queue.length > 0) processQueue();
 }
 
-export async function generateAIContent(prompt: string, systemInstruction?: string): Promise<string> {
+export async function generateAIContent(prompt: string, systemInstruction?: string, isBackground = false): Promise<string> {
   const fullMessage = systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt;
   const cacheKey = fullMessage;
 
@@ -52,43 +61,53 @@ export async function generateAIContent(prompt: string, systemInstruction?: stri
             if (errData && errData.error) {
               backendError = typeof errData.error === 'string' ? errData.error : JSON.stringify(errData.error);
             }
-          } catch (e) {
-            // failed to parse json
-          }
+          } catch (e) { /* ignored */ }
           
           if (response.status === 429) {
             if (retryCount < 2) {
-              console.warn(`Rate limit hit (attempt ${retryCount + 1}), retrying in 26 seconds...`);
-              await new Promise(r => setTimeout(r, 26000));
-              return executeRequest(retryCount + 1);
+              const waitTime = 26000 + (retryCount * 5000); // Incremental wait
+              console.warn(`Rate limit hit (attempt ${retryCount + 1}), retrying in ${waitTime/1000}s...`);
+              
+              // Instead of blocking, we schedule a new attempt
+              setTimeout(() => {
+                queue.push({ 
+                  execute: () => executeRequest(retryCount + 1), 
+                  priority: isBackground ? 0 : 10 
+                });
+                processQueue();
+              }, waitTime);
+              
+              return; // Exit this execution, but the promise is still pending
             }
-            throw new Error("Rate limit excedido. Aguarde 25 segundos e tente novamente.");
+            throw new Error("O limite de requisições da IA gratuita foi atingido. Por favor, aguarde 30 segundos e tente novamente.");
           } else if (response.status === 401) {
-            throw new Error(`Chave de API inválida. Detalhe: ${backendError}`);
+            throw new Error(`Chave de API inválida ou expirada.`);
           } else if (response.status === 400) {
-            throw new Error(`Requisição inválida (parâmetros ausentes). Detalhe: ${backendError}`);
+            throw new Error(`Requisição inválida. Verifique os dados enviados.`);
           } else if (response.status === 500 && backendError.includes("API Key not configured")) {
-            throw new Error("A chave da IA não foi configurada no Vercel. Adicione a variável APIFREELLM_API_KEY no painel.");
+            throw new Error("A chave da IA não foi configurada. Verifique as configurações no servidor.");
           }
-          throw new Error(`Erro na API (${response.status}): ${backendError}`);
+          throw new Error(`Erro na IA (${response.status}): ${backendError || 'Verifique sua conexão e tente novamente.'}`);
         }
 
         const data = await response.json();
         
         if (data.success && data.response) {
-          // Update cache
           cache.set(cacheKey, { response: data.response, timestamp: Date.now() });
           resolve(data.response);
         } else {
-          throw new Error("A IA não retornou nenhum conteúdo válido.");
+          throw new Error("A IA não retornou um conteúdo válido no momento.");
         }
       } catch (error) {
-        console.error('Error calling APIFreeLLM:', error);
-        reject(new Error(`Erro na resposta da IA: ${error instanceof Error ? error.message : 'Erro desconhecido'}`));
+        console.error('AI Request Error:', error);
+        reject(error instanceof Error ? error : new Error('Erro desconhecido na IA'));
       }
     };
 
-    queue.push(() => executeRequest(0));
+    queue.push({ 
+      execute: () => executeRequest(0), 
+      priority: isBackground ? 0 : 10 
+    });
     processQueue();
   });
 }

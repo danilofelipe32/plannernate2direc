@@ -3,13 +3,7 @@ import { Request, Response } from 'express';
 export default async function handler(req: Request, res: Response) {
   try {
     const bodyStr = req.body ? JSON.stringify(req.body) : "";
-    console.log(`Proxying chat request: ${bodyStr.substring(0, 100)}...`);
-    // JEITO CORRETO na pasta /api
     const apiKey = process.env.APIFREELLM_API_KEY;
-    console.log(`API Key present: ${!!apiKey}`);
-    if (apiKey) {
-      console.log(`API Key starts with: ${apiKey.substring(0, 10)}...`);
-    }
     
     if (!apiKey) {
       console.error("APIFREELLM_API_KEY is not defined in environment variables!");
@@ -22,12 +16,13 @@ export default async function handler(req: Request, res: Response) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
+        "Authorization": `Bearer ${apiKey}`,
+        "Accept": "application/json"
       },
       body: JSON.stringify(payload)
     });
 
-    console.log(`API response status: ${response.status}`);
+    console.log(`[API Proxy] Status: ${response.status} para o modelo: ${payload.model || 'default'}`);
     const textData = await response.text();
     
     let data;

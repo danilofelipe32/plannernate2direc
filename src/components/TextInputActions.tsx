@@ -29,8 +29,10 @@ export const TextInputActions: React.FC<TextInputActionsProps> = ({ onEdit, isTe
   };
 
   const isValueEmpty = getCleanValue(currentValue) === '';
+  const hasContext = (prompt && prompt.length > 0) || (context && context.length > 0);
+  
   const handleGenerate = async () => {
-    if (!onGenerate || !prompt || isValueEmpty) return;
+    if (!onGenerate || !prompt || (!hasContext && isValueEmpty)) return;
     setIsLoading(true);
     try {
       const systemInstruction = `Você é um especialista sênior em gestão educacional e inovação pedagógica. Sua linguagem é clara, objetiva, técnica e profissional. Você deve fornecer respostas diretas, sem introduções ou conclusões desnecessárias, focando puramente no conteúdo solicitado.${context ? `\n\nContexto adicional do formulário relacionado a esta requisição:\n${context}` : ''}`;
@@ -63,13 +65,13 @@ export const TextInputActions: React.FC<TextInputActionsProps> = ({ onEdit, isTe
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={isLoading || isValueEmpty}
+            disabled={isLoading}
             className={`p-1.5 rounded-md transition-all duration-200 ${
-              isValueEmpty 
+              isLoading 
                 ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' 
                 : 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30'
             }`}
-            title={isValueEmpty ? "Digite algo para a IA usar como contexto" : "Gerar com IA"}
+            title="Gerar com IA"
           >
            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
           </button>

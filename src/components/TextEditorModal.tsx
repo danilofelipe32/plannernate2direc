@@ -257,7 +257,7 @@ export const TextEditorModal: React.FC<TextEditorModalProps> = ({ isOpen, onClos
               className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-200 dark:shadow-none"
             >
               {isGeneratingSimilar ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-              Mas conteúdo semelhante
+              Mais conteúdo semelhante
             </button>
 
             <button 
@@ -266,7 +266,7 @@ export const TextEditorModal: React.FC<TextEditorModalProps> = ({ isOpen, onClos
               className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-green-200 dark:shadow-none"
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-              Assim mas...
+              Refinar este texto...
             </button>
           </div>
           

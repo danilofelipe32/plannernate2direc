@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { TextInputActions } from './components/TextInputActions';
 import { TextEditorModal } from './components/TextEditorModal';
 import { RichInput } from './components/RichInput';
@@ -374,6 +369,8 @@ export default function App() {
   const [projectSubmitterName, setProjectSubmitterName] = useState('');
   const [projectSubmitDate, setProjectSubmitDate] = useState('');
 
+  const projectContext = `Escola: ${stripHtml(projectSchoolName)}\nMunicípio: ${stripHtml(projectMunicipality)}\nProjeto: ${stripHtml(projectName)}\nProfessor: ${stripHtml(projectTeacherName)}\nContato: ${stripHtml(projectContact)}\nÁrea: ${stripHtml(projectArea)}\nPúblico: ${stripHtml(projectTargetAudience)}\nObjetivo: ${stripHtml(projectObjective)}\nAtividades: ${stripHtml(projectActivities)}\nResultados adicionais: ${stripHtml(projectResultOther)}`;
+
   const [settings, setSettings] = useState({
     notifications: true,
     darkMode: false,
@@ -634,24 +631,6 @@ export default function App() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (!isSupabaseConfigured()) {
-      showToast('Supabase não está configurado.', 'error');
-      return;
-    }
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      showToast(error.message || 'Erro ao entrar com Google', 'error');
-    }
-  };
-
   const handleLogout = async () => {
     if (!isSupabaseConfigured()) return;
     await supabase.auth.signOut();
@@ -820,7 +799,7 @@ export default function App() {
 
         const prompt = `Qual é a previsão do tempo atual para ${locationContext}? Retorne APENAS um JSON válido com os campos: temp (número em Celsius), condition (string curta em português), city (nome da cidade), humidity (número %), windSpeed (número km/h) e icon (um dos seguintes: 'sun', 'cloud', 'rain', 'storm').`;
         
-        const text = await generateAIContent(prompt);
+        const text = await generateAIContent(prompt, undefined, true);
 
         if (text) {
           try {
@@ -1338,7 +1317,7 @@ export default function App() {
     csvContent += "Tipo,Titulo,Status/Data,Categoria/Cor\n";
     
     tasks.forEach(task => {
-      csvContent += `Tarefa,"${stripHtml(task.title)}",${task.completed ? 'Concluída' : 'Pendente'},"${task.category}"\n`;
+      csvContent += `Tarefa,"${stripHtml(task.title)}","${task.completed ? 'Concluída' : 'Pendente'}","${task.category}","${stripHtml(task.description || '')}"\n`;
     });
     
     schedule.forEach(event => {
@@ -1346,7 +1325,7 @@ export default function App() {
     });
     
     notes.forEach(note => {
-      csvContent += `Nota,"${stripHtml(note.title)}","${note.date}","${note.color}"\n`;
+      csvContent += `Nota,"${stripHtml(note.title)}","${note.date}","${note.color}","${stripHtml(note.content || '')}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -1363,21 +1342,21 @@ export default function App() {
     const doc = new jsPDF();
     doc.text("PlannerPro - Exportação de Dados", 14, 15);
     
-    const taskData = tasks.map(t => [t.title, t.completed ? 'Concluída' : 'Pendente', t.category, t.startDate || '-']);
+    const taskData = tasks.map(t => [stripHtml(t.title), t.completed ? 'Concluída' : 'Pendente', t.category, t.startDate || '-', stripHtml(t.description || '')]);
     autoTable(doc, {
-      head: [['Tarefa', 'Status', 'Categoria', 'Data']],
+      head: [['Tarefa', 'Status', 'Categoria', 'Data', 'Descrição']],
       body: taskData,
       startY: 25,
     });
     
-    const eventData = schedule.map(e => [e.title, `${e.startDate} ${e.startTime}`, e.color]);
+    const eventData = schedule.map(e => [stripHtml(e.title), `${e.startDate} ${e.startTime}`, e.color]);
     autoTable(doc, {
       head: [['Evento', 'Data/Hora', 'Cor']],
       body: eventData,
       startY: (doc as any).lastAutoTable.finalY + 10,
     });
     
-    const noteData = notes.map(n => [n.title, n.date, n.content.substring(0, 50) + '...']);
+    const noteData = notes.map(n => [stripHtml(n.title), n.date, stripHtml(n.content || '')]);
     autoTable(doc, {
       head: [['Nota', 'Data', 'Conteúdo']],
       body: noteData,
@@ -3007,27 +2986,6 @@ export default function App() {
               </button>
             </form>
 
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-slate-800 text-slate-500">Ou continue com</span>
-              </div>
-            </div>
-
-            <button 
-              onClick={handleGoogleLogin}
-              className="w-full py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center space-x-3"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              <span>Google</span>
-            </button>
           </div>
           
           <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 text-center">
@@ -3230,8 +3188,8 @@ export default function App() {
                             setEditorCallback(() => setNewTaskTitle);
                             setIsEditorModalOpen(true);
                           }}
-                          prompt={`Sugira um título profissional e conciso para uma tarefa sobre: ${newTaskTitle}.`} 
-                         context={`Título: ${newTaskTitle}\nDescrição: ${newTaskDescription}\nCategoria: ${newTaskCategory}`}  currentValue={newTaskTitle} />
+                          prompt={`Sugira um título profissional e conciso para uma tarefa sobre: ${stripHtml(newTaskTitle)}.`} 
+                         context={`Título: ${stripHtml(newTaskTitle)}\nDescrição: ${stripHtml(newTaskDescription)}\nCategoria: ${newTaskCategory}`}  currentValue={newTaskTitle} />
                       </div>
                     </div>
                     <div>
@@ -3250,8 +3208,8 @@ export default function App() {
                             setEditorCallback(() => setNewTaskDescription);
                             setIsEditorModalOpen(true);
                           }}
-                          prompt={`Sugira uma descrição detalhada e palavras-chave relevantes para uma tarefa com o título: ${newTaskTitle}.`} 
-                         context={`Título: ${newTaskTitle}\nDescrição: ${newTaskDescription}\nCategoria: ${newTaskCategory}`}  currentValue={newTaskDescription} />
+                          prompt={`Sugira uma descrição detalhada e palavras-chave relevantes para uma tarefa com o título: ${stripHtml(newTaskTitle)}.`} 
+                         context={`Título: ${stripHtml(newTaskTitle)}\nDescrição: ${stripHtml(newTaskDescription)}\nCategoria: ${newTaskCategory}`}  currentValue={newTaskDescription} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3397,8 +3355,8 @@ export default function App() {
                           setEditorCallback(() => setNewCommentText);
                           setIsEditorModalOpen(true);
                         }}
-                        prompt={`Sugira um comentário profissional e construtivo sobre: ${newCommentText}.`} 
-                       context={`Comentário inicial: ${newCommentText}`}  currentValue={newCommentText} />
+                        prompt={`Sugira um comentário profissional e construtivo sobre: ${stripHtml(newCommentText)}.`} 
+                       context={`Comentário inicial: ${stripHtml(newCommentText)}`}  currentValue={newCommentText} />
                     </div>
                     <button 
                       onClick={handleAddComment}
@@ -3441,7 +3399,7 @@ export default function App() {
                             setIsEditorModalOpen(true);
                           }}
                           prompt={`Sugira um título profissional e conciso para um evento sobre: ${newEventTitle}.`} 
-                         context={`Título do Evento: ${newEventTitle}\nHorário Inicial: ${newEventStartDate}`}  currentValue={newEventTitle} />
+                         context={`Título do Evento: ${stripHtml(newEventTitle)}\nData Inicial: ${newEventStartDate}`}  currentValue={newEventTitle} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3587,8 +3545,8 @@ export default function App() {
                               setEditorCallback(() => setPlanningGoal);
                               setIsEditorModalOpen(true);
                             }}
-                            prompt={`Como um especialista sênior em gestão educacional, elabore um objetivo geral robusto, claro e objetivo para um plano de ação focado em: ${planningGoal || 'um tema educacional relevante'}. O texto deve ser profissional, inspirador e direto.`} 
-                           context={`Objetivo Geral: ${planningGoal}\nObjetivos Específicos: ${planningSpecificGoals}\nAções: ${planningActions}\nMetodologia: ${planningMethodology}`}  currentValue={planningGoal} />
+                            prompt={`Como um especialista sênior em gestão educacional, elabore um objetivo geral robusto, claro e objetivo para um plano de ação focado em: ${stripHtml(planningGoal) || 'um tema educacional relevante'}. O texto deve ser profissional, inspirador e direto.`} 
+                           context={`Objetivo Geral: ${stripHtml(planningGoal)}\nObjetivos Específicos: ${stripHtml(planningSpecificGoals)}\nAções: ${stripHtml(planningActions)}\nMetodologia: ${stripHtml(planningMethodology)}`}  currentValue={planningGoal} />
                         </div>
                       </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3610,8 +3568,8 @@ export default function App() {
                               setEditorCallback(() => setPlanningSpecificGoals);
                               setIsEditorModalOpen(true);
                             }}
-                            prompt={`Com base no objetivo geral "${planningGoal || 'definido anteriormente'}", elabore objetivos específicos (SMART) claros, objetivos e tecnicamente precisos para: ${planningSpecificGoals || 'as metas do projeto'}. Use linguagem de especialista em educação.`} 
-                           context={`Objetivo Geral: ${planningGoal}\nObjetivos Específicos: ${planningSpecificGoals}\nAções: ${planningActions}\nMetodologia: ${planningMethodology}`}  currentValue={planningSpecificGoals} />
+                            prompt={`Com base no objetivo geral "${stripHtml(planningGoal) || 'definido anteriormente'}", elabore objetivos específicos (SMART) claros, objetivos e tecnicamente precisos para: ${stripHtml(planningSpecificGoals) || 'as metas do projeto'}. Use linguagem de especialista em educação.`} 
+                           context={`Objetivo Geral: ${stripHtml(planningGoal)}\nObjetivos Específicos: ${stripHtml(planningSpecificGoals)}\nAções: ${stripHtml(planningActions)}\nMetodologia: ${stripHtml(planningMethodology)}`}  currentValue={planningSpecificGoals} />
                         </div>
                       </div>
                       <div>
@@ -3632,8 +3590,8 @@ export default function App() {
                               setEditorCallback(() => setPlanningActions);
                               setIsEditorModalOpen(true);
                             }}
-                            prompt={`Considerando o objetivo "${planningGoal || 'principal'}" e os objetivos específicos "${planningSpecificGoals || 'detalhados'}", detalhe ações práticas, estratégicas e objetivas para: ${planningActions || 'a execução do plano'}. Use terminologia pedagógica avançada.`} 
-                           context={`Objetivo Geral: ${planningGoal}\nObjetivos Específicos: ${planningSpecificGoals}\nAções: ${planningActions}\nMetodologia: ${planningMethodology}`}  currentValue={planningActions} />
+                            prompt={`Considerando o objetivo "${stripHtml(planningGoal) || 'principal'}" e os objetivos específicos "${stripHtml(planningSpecificGoals) || 'detalhados'}", detalhe ações práticas, estratégicas e objetivas para: ${stripHtml(planningActions) || 'a execução do plano'}. Use terminologia pedagógica avançada.`} 
+                           context={`Objetivo Geral: ${stripHtml(planningGoal)}\nObjetivos Específicos: ${stripHtml(planningSpecificGoals)}\nAções: ${stripHtml(planningActions)}\nMetodologia: ${stripHtml(planningMethodology)}`}  currentValue={planningActions} />
                         </div>
                       </div>
                     </div>
@@ -3655,8 +3613,8 @@ export default function App() {
                             setEditorCallback(() => setPlanningMethodology);
                             setIsEditorModalOpen(true);
                           }}
-                          prompt={`Baseado no plano que visa "${planningGoal || 'o objetivo central'}" através das ações "${planningActions || 'estratégicas'}", descreva uma metodologia pedagógica robusta, profissional e clara para: ${planningMethodology || 'a implementação do projeto'}. Foque em eficácia e rigor técnico.`} 
-                         context={`Objetivo Geral: ${planningGoal}\nObjetivos Específicos: ${planningSpecificGoals}\nAções: ${planningActions}\nMetodologia: ${planningMethodology}`}  currentValue={planningMethodology} />
+                          prompt={`Baseado no plano que visa "${stripHtml(planningGoal) || 'o objetivo central'}" através das ações "${stripHtml(planningActions) || 'estratégicas'}", descreva uma metodologia pedagógica robusta, profissional e clara para: ${stripHtml(planningMethodology) || 'a implementação do projeto'}. Foque em eficácia e rigor técnico.`} 
+                         context={`Objetivo Geral: ${stripHtml(planningGoal)}\nObjetivos Específicos: ${stripHtml(planningSpecificGoals)}\nAções: ${stripHtml(planningActions)}\nMetodologia: ${stripHtml(planningMethodology)}`}  currentValue={planningMethodology} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3740,8 +3698,8 @@ export default function App() {
                           setEditorCallback(() => setNewNoteTitle);
                           setIsEditorModalOpen(true);
                         }}
-                        prompt={`Sugira um título criativo e inspirador para uma anotação sobre: ${newNoteTitle}.`} 
-                       context={`Título: ${newNoteTitle}\nConteúdo atual: ${newNoteContent}`}  currentValue={newNoteTitle} />
+                        prompt={`Sugira um título criativo e inspirador para uma anotação sobre: ${stripHtml(newNoteTitle)}.`} 
+                       context={`Título: ${stripHtml(newNoteTitle)}\nConteúdo atual: ${stripHtml(newNoteContent)}`}  currentValue={newNoteTitle} />
                     </div>
                     <div className="relative">
                       <RichInput
@@ -3759,8 +3717,8 @@ export default function App() {
                           setEditorCallback(() => setNewNoteContent);
                           setIsEditorModalOpen(true);
                         }}
-                        prompt={`Desenvolva o conteúdo desta anotação de forma criativa e detalhada, com base em: ${newNoteContent}.`} 
-                       context={`Título: ${newNoteTitle}\nConteúdo atual: ${newNoteContent}`}  currentValue={newNoteContent} />
+                        prompt={`Desenvolva o conteúdo desta anotação de forma criativa e detalhada, com base em: ${stripHtml(newNoteContent)}.`} 
+                       context={`Título: ${stripHtml(newNoteTitle)}\nConteúdo atual: ${stripHtml(newNoteContent)}`}  currentValue={newNoteContent} />
                     </div>
                     <div className="flex items-center space-x-4 pt-6 border-t border-slate-100">
                       <span className="text-base font-semibold text-slate-600 uppercase tracking-wider">Cor do Card:</span>
@@ -3873,7 +3831,7 @@ export default function App() {
                               }}
                               prompt={`Sugira um nome de escola fictício ou profissional para um projeto educacional.`} 
                               currentValue={projectSchoolName} 
-                              context={`Escola: ${projectSchoolName}\nMunicípio: ${projectMunicipality}\nProjeto: ${projectName}\nProfessor: ${projectTeacherName}\nContato: ${projectContact}\nÁrea: ${projectArea}\nPúblico: ${projectTargetAudience}\nObjetivo: ${projectObjective}\nAtividades: ${projectActivities}\nResultados adicionais: ${projectResultOther}`}
+                              context={projectContext}
                             />
                           </div>
                         </div>
