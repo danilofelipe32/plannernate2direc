@@ -1,5 +1,3 @@
-/// <reference types="vite/client" />
-
 // Simple cache to avoid redundant requests
 const cache = new Map<string, { response: string, timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes

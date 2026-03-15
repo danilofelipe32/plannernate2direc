@@ -1,11 +1,13 @@
+"use client";
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { TextInputActions } from './components/TextInputActions';
-import { TextEditorModal } from './components/TextEditorModal';
-import { RichInput } from './components/RichInput';
+import { TextInputActions } from '../components/TextInputActions';
+import { TextEditorModal } from '../components/TextEditorModal';
+import { RichInput } from '../components/RichInput';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
@@ -63,9 +65,9 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { generateAIContent } from './lib/ai';
+import { generateAIContent } from '../lib/ai';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 import {
   DndContext,
@@ -88,7 +90,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-const DraggableEvent = ({ event, children }: { event: Event, children: React.ReactNode, key?: string | number }) => {
+const DraggableEvent = ({ event, children }: { event: CalendarEvent, children: React.ReactNode, key?: string | number }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `event-${event.id}`,
     data: { event },
@@ -134,7 +136,7 @@ const ActivityFeed = ({
   setActiveTab 
 }: { 
   tasks: Task[], 
-  events: Event[], 
+  events: CalendarEvent[], 
   notes: Note[], 
   setActiveTab: (tab: string) => void 
 }) => {
@@ -205,7 +207,7 @@ type Task = {
   reminder?: string;
 };
 
-type Event = {
+type CalendarEvent = {
   id: string;
   user_id: string;
   title: string;
@@ -695,7 +697,7 @@ export default function App() {
   };
 
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [schedule, setSchedule] = useState<Event[]>([]);
+  const [schedule, setSchedule] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     const checkReminders = () => {
@@ -740,7 +742,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
   const [filteredNotes, setFilteredNotes] = useState<Note[]>(notes);
-  const [filteredSchedule, setFilteredSchedule] = useState<Event[]>(schedule);
+  const [filteredSchedule, setFilteredSchedule] = useState<CalendarEvent[]>(schedule);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>(projects);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -800,8 +802,7 @@ export default function App() {
       ));
       
       setFilteredSchedule(schedule.filter(e => 
-        e.title.toLowerCase().includes(query) || 
-        (e.description?.toLowerCase().includes(query))
+        e.title.toLowerCase().includes(query)
       ));
       
       setFilteredProjects(projects.filter(p => 
@@ -1402,7 +1403,7 @@ export default function App() {
     showToast('Dados exportados para PDF com sucesso');
   };
 
-  const handleEditEvent = (event: Event) => {
+  const handleEditEvent = (event: CalendarEvent) => {
     setEditingEventId(event.id);
     setNewEventTitle(event.title);
     setNewEventStartDate(event.startDate);
