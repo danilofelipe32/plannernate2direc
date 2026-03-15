@@ -16,27 +16,31 @@ export default async function handler(req: Request, res: Response) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Origin": "https://apifreellm.com",
-        "Referer": "https://apifreellm.com/"
+        "Authorization": `Bearer ${apiKey.trim()}`
       },
       body: JSON.stringify(payload)
     });
 
-    console.log(`[API Proxy] Status: ${response.status} | Modelo: ${payload.model || 'default'}`);
     const textData = await response.text();
+    console.log(`[Proxy] Status: ${response.status} | Bytes: ${textData.length}`);
     
+    if (!response.ok) {
+      console.error(`[Proxy Error] Status ${response.status}: ${textData.substring(0, 200)}`);
+      return res.status(response.status).json({ 
+        success: false, 
+        error: `Erro no servidor de IA (Status ${response.status})`,
+        details: textData.includes("cloudflare") || textData.includes("Forbidden") ? "Acesso bloqueado pelo firewall da API. Tente novamente em instantes." : textData.substring(0, 100)
+      });
+    }
+
     let data;
     try {
       data = JSON.parse(textData);
     } catch (e) {
-      console.error("Failed to parse API response as JSON. Raw response:", textData.substring(0, 500));
-      return res.status(response.status).json({ success: false, error: "Invalid JSON from upstream API", raw: textData.substring(0, 200) });
+      return res.status(500).json({ success: false, error: "Resposta da IA não é um JSON válido", raw: textData.substring(0, 100) });
     }
 
-    res.status(response.status).json(data);
+    res.status(200).json(data);
   } catch (error) {
     console.error("Error proxying to APIFreeLLM:", error);
     res.status(500).json({ success: false, error: error instanceof Error ? error.message : "Internal Server Error" });
